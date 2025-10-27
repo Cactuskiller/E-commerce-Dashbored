@@ -138,7 +138,9 @@ export const BannerContentModal = ({
           setLoading(false);
           return;
         }
-        map = slides.map(slide => ({
+        console.log("Saving slides:", slides); // Debug line
+        const validSlides = slides.filter(slide => slide && slide.image && slide.link && slide.name);
+        map = validSlides.map(slide => ({
           image: slide.image,
           link: slide.link,
           name: slide.name,
@@ -463,9 +465,10 @@ export const BannerContentModal = ({
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontWeight: 500 }}>السلايدات</label>
               <List
-                dataSource={slides}
+                dataSource={slides.filter(slide => slide && slide.image && slide.name && slide.link)}
                 renderItem={(slide, idx) => (
                   <List.Item
+                    key={slide.image + slide.name + idx} // Always provide a key
                     actions={[
                       <Button
                         type="link"
@@ -563,20 +566,58 @@ export const BannerContentModal = ({
   };
 
   useEffect(() => {
-    if (isOpen && (record?.type === "List" || record?.type === "Timer")) {
+    // Fetch categories when modal opens for Category type
+    if (isOpen && record?.type === "Category") {
       apiCall({
-        pathname: "/admin/products",
+        pathname: "/admin/categories",
         method: "GET",
         auth: true,
       }).then((res) => {
         if (res && !res.error) {
-          setProducts(Array.isArray(res.data) ? res.data : res);
+          setCategories(Array.isArray(res.data) ? res.data : res);
+          // If record.map contains category objects, extract their IDs for selection
+          if (Array.isArray(record?.map) && record.map.length > 0 && !record.map[0].categoryIds) {
+            // If map contains objects, extract IDs
+            const selectedIds = Array.isArray(record.map)
+              ? record.map.map(cat => cat.id).filter(Boolean)
+              : [];
+            const updatedMap = [{ categoryIds: selectedIds }];
+            setRecord({ ...record, map: updatedMap });
+          }
         } else {
-          setProducts([]);
+          setCategories([]);
         }
       });
     }
-  }, [isOpen, record]);
+    // Fetch products when modal opens for List or Timer type
+    // Fetch products when modal opens for List or Timer type
+  if (isOpen && (record?.type === "List" || record?.type === "Timer")) {
+    apiCall({
+      pathname: "/admin/products",
+      method: "GET",
+      auth: true,
+    }).then((res) => {
+      if (res && !res.error) {
+        setProducts(Array.isArray(res.data) ? res.data : res);
+        // For Timer, if products are objects, extract their IDs
+        if (
+          record?.type === "Timer" &&
+          Array.isArray(getFirstMap(record)?.products) &&
+          (!getFirstMap(record)?.productIds || getFirstMap(record)?.productIds.length === 0)
+        ) {
+          const selectedIds = getFirstMap(record).products.map(p => p.id).filter(Boolean);
+          const updatedMap = [{
+            ...getFirstMap(record),
+            productIds: selectedIds,
+          }];
+          setRecord({ ...record, map: updatedMap });
+        }
+      } else {
+        setProducts([]);
+      }
+    });
+  }
+  }, [isOpen]);
 
   if (!isOpen || !record) return null;
 
