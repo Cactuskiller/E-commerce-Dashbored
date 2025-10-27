@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* RTL Support */
+.rtl {
+  direction: rtl;
+}
+
+/* Fix for Arabic text rendering */
+body {
+  font-family: 'Arial', 'Segoe UI', 'Tahoma', sans-serif;
+}
+
+/* RTL table adjustments */
+.rtl table {
+  direction: rtl;
+}
+
+.rtl th,
+.rtl td {
+  text-align: right;
+}
+
