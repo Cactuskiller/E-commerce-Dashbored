@@ -139,18 +139,26 @@ export const OrderDetailsDrawer = ({
   const fetchAvailableProducts = async () => {
     setLoadingProducts(true);
     try {
-      const data = await apiCall({
-        pathname: `/admin/products/with-primary-image`,
+      const res = await apiCall({
+        pathname: `/admin/products`,
         method: "GET",
         auth: true,
       });
 
-      if (data?.error) {
-        throw new Error(data.message || "Failed to fetch products");
-      }
+      if (res?.error) throw new Error(res.message || "Failed to fetch products");
 
-      console.log("Available products fetched:", data);
-      setAvailableProducts(Array.isArray(data) ? data : []);
+      const productsListRaw = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      // Add primary_image property for each product
+      const productsList = productsListRaw.map(product => ({
+        ...product,
+        primary_image: product.image
+          ? product.image
+          : (Array.isArray(product.images) && product.images.length > 0
+              ? product.images[0].link
+              : null),
+      }));
+
+      setAvailableProducts(productsList);
     } catch (error) {
       console.error("Error fetching products:", error);
       message.error("فشل في تحميل المنتجات المتاحة");
@@ -207,7 +215,11 @@ export const OrderDetailsDrawer = ({
       price: parseFloat(selectedProductToAdd.price) || 0,
       qty: parseInt(addProductForm.quantity),
       quantity: parseInt(addProductForm.quantity),
-      image: selectedProductToAdd.primary_image || null,
+      image: selectedProductToAdd.primary_image || (
+        Array.isArray(selectedProductToAdd.images) && selectedProductToAdd.images.length > 0
+          ? selectedProductToAdd.images[0].link
+          : null
+      ),
       options: Object.keys(options).length > 0 ? options : null,
     };
 
