@@ -41,7 +41,7 @@ export const OrderDetailsDrawer = ({
   const [localItems, setLocalItems] = useState([]);
   const [liveItems, setLiveItems] = useState([]);
   const [updatingOrder, setUpdatingOrder] = useState(false);
-  const [differentValueStock, setDifferentValueStock] = useState(0);
+  const [differentValueStock, setDifferentValueStock] = useState([]);
 
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
   const [availableProducts, setAvailableProducts] = useState([]);
@@ -282,27 +282,37 @@ export const OrderDetailsDrawer = ({
 
   const handleQuantityChange = (index, item, process, value = null) => {
     const liveStockItem = liveItems.find((p) => p.id === item.id);
-    const availableStock = liveStockItem ? liveStockItem.stock : 0;
-    const oldQty = item.qty;
+    const liveStock = liveStockItem ? Number(liveStockItem.stock) : 0;
+    const oldQty = Number(item.qty) || 0;
     let newQty = oldQty;
 
+    // ✅ Compute the total allowed (current reserved + live stock)
+    const maxAvailable = liveStock + oldQty;
+
+    // 🪵 DEBUG LOGS
+    console.log("🔍 DEBUG STOCK CHECK ----------------------");
+    console.log("🧩 Product ID:", item.id);
+    console.log("📦 Live Stock (from DB):", liveStock);
+    console.log("🧾 Old Qty (in current order):", oldQty);
+    console.log("✅ Max Available (live + old):", maxAvailable);
+    console.log("⚙️ Process:", process);
+    console.log("💡 Value provided:", value);
+    console.log("------------------------------------------");
+
+    // ✅ Validation Logic
     if (value !== null) {
       if (value < 1) {
         message.error("الكمية لا يمكن أن تكون أقل من 1");
         return;
       }
-      if (value > availableStock) {
-        message.error(
-          `الكمية المطلوبة تتجاوز المخزون المتاح (${availableStock})`
-        );
+      if (value > maxAvailable) {
+        message.error(`الكمية المطلوبة تتجاوز الحد المسموح (${maxAvailable})`);
         return;
       }
       newQty = value;
     } else if (process === "increment") {
-      if (oldQty + 1 > availableStock) {
-        message.error(
-          `الكمية المطلوبة تتجاوز المخزون المتاح (${availableStock})`
-        );
+      if (oldQty + 1 > maxAvailable) {
+        message.error(`الكمية المطلوبة تتجاوز الحد المسموح (${maxAvailable})`);
         return;
       }
       newQty = oldQty + 1;
@@ -314,14 +324,26 @@ export const OrderDetailsDrawer = ({
       newQty = oldQty - 1;
     }
 
-    // Update localItems immutably
+    console.log("🎯 New Qty to set:", newQty);
+
+    // ✅ Update local state immutably
     setLocalItems((prev) =>
       prev.map((itm, idx) => (idx === index ? { ...itm, qty: newQty } : itm))
     );
 
-    // Update stock difference
+    // ✅ Track the difference
     const diff = newQty - oldQty;
-    setDifferentValueStock((prev) => prev + diff);
+    console.log("📊 Difference in qty:", diff);
+
+    setDifferentValueStock((prev) => ({
+      ...prev,
+      [item.id]: (prev[item.id] || 0) + diff,
+    }));
+
+    console.log("📦 Updated differentValueStock:", {
+      ...differentValueStock,
+      [item.id]: (differentValueStock[item.id] || 0) + diff,
+    });
   };
 
   const handleRemoveProduct = (index) => {
@@ -339,7 +361,11 @@ export const OrderDetailsDrawer = ({
       });
       if (res?.success && Array.isArray(res.products)) {
         const stockMap = {};
-        setLocalItems(res?.order.items || []);
+
+        setLocalItems(
+          res?.order.items.map((i) => ({ ...i, initialQty: i.qty }))
+        );
+
         setLiveItems(res?.products || []);
         res.products.forEach((p) => {
           stockMap[p.id] = p.stock;
@@ -363,26 +389,10 @@ export const OrderDetailsDrawer = ({
     setUpdatingOrder(true);
 
     try {
-      // ✅ 3. Save order only if stock is valid
-      // const res = await apiCall({
-      //   pathname: `/admin/orders/${order.id}`,
-      //   method: "PUT",
-      //   auth: true,
-      //   data: {
-      // user_id: order.user_id,
-      // items: JSON.stringify(localItems),
-      // phone: order.phone,
-      // address: order.address,
-      // status: order.status,
-      // active: order.active,
-      // voucher_info: order.voucher_info,
-      // delivery_cost: order.delivery_cost,
-      // voucher_id: order.voucher_id,
-      //   },
-      // });
-      console.log({
+      // ✅ Prepare data to send
+      const payload = {
         user_id: order.user_id,
-        items: localItems,
+        items: JSON.stringify(localItems),
         phone: order.phone,
         address: order.address,
         status: order.status,
@@ -390,15 +400,28 @@ export const OrderDetailsDrawer = ({
         voucher_info: order.voucher_info,
         delivery_cost: order.delivery_cost,
         voucher_id: order.voucher_id,
+        different_stock: differentValueStock, // ✅ NEW FIELD
+      };
+
+      // ✅ Send the updated order to the backend
+      const res = await apiCall({
+        pathname: `/admin/orders/${order.id}`,
+        method: "PUT",
+        auth: true,
+        data: payload,
       });
 
-      // if (!res?.success) throw new Error(res?.error || "فشل في حفظ التغييرات");
+      console.log("🟩 Order update payload:", payload);
 
-      // message.success("✅ تم حفظ التغييرات بنجاح");
-      // refreshOrders?.();
-      // order.items = JSON.stringify(localItems);
+      if (!res?.success) throw new Error(res?.error || "فشل في حفظ التغييرات");
+
+      message.success("✅ تم حفظ التغييرات بنجاح");
+      refreshOrders?.();
+
+      // ✅ Optionally update local state to reflect saved data
+      order.items = JSON.stringify(localItems);
     } catch (error) {
-      console.error(error);
+      console.error("❌ Save Order Error:", error);
       setSaveOrderError(error.message || "فشل في حفظ التغييرات");
     } finally {
       setUpdatingOrder(false);
@@ -664,6 +687,7 @@ export const OrderDetailsDrawer = ({
                           }
                           disabled={item?.qty <= 1}
                         />
+
                         <InputNumber
                           size="small"
                           min={1}
@@ -671,7 +695,13 @@ export const OrderDetailsDrawer = ({
                             const liveStockItem = liveItems.find(
                               (p) => p.id === item.id
                             );
-                            return liveStockItem ? liveStockItem.stock : 999;
+                            const liveStock = liveStockItem
+                              ? liveStockItem.stock
+                              : 0;
+                            // ✅ allow up to live + old
+                            return (
+                              liveStock + (item?.initialQty || item?.qty || 0)
+                            );
                           })()}
                           value={item?.qty || 0}
                           onChange={(value) =>
@@ -679,6 +709,7 @@ export const OrderDetailsDrawer = ({
                           }
                           style={{ width: 60 }}
                         />
+
                         <Button
                           size="small"
                           type="text"
@@ -690,10 +721,12 @@ export const OrderDetailsDrawer = ({
                             const liveStockItem = liveItems.find(
                               (p) => p.id === item.id
                             );
-                            return (
-                              item?.qty >=
-                              (liveStockItem ? liveStockItem.stock : 999)
-                            );
+                            const liveStock = liveStockItem
+                              ? liveStockItem.stock
+                              : 0;
+                            const oldQty = item?.initialQty || item?.qty || 0;
+                            // ✅ disable only when reaching (oldQty + liveStock)
+                            return item?.qty >= oldQty + liveStock;
                           })()}
                         />
                       </div>
@@ -734,7 +767,20 @@ export const OrderDetailsDrawer = ({
       <Drawer
         title={`تفاصيل الطلب #${order?.id || ""}`}
         open={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={() => {
+          setIsOpen(false);
+          try {
+            const originalItems =
+              typeof order?.items === "string"
+                ? JSON.parse(order.items)
+                : order?.items || [];
+            setLocalItems(originalItems);
+            setSaveOrderError("");
+          } catch {
+            setLocalItems([]);
+            setSaveOrderError("");
+          }
+        }}
         width={700}
         extra={
           <Button key="save" type="primary" onClick={handleSaveOrder}>
@@ -996,43 +1042,41 @@ export const OrderDetailsDrawer = ({
               style={{ width: "100%" }}
             />
           </div>
-          {Object.keys(editForm.selectedOptions).length > 0 && (
-            <div>
-              <label
-                style={{ fontWeight: 500, marginBottom: 8, display: "block" }}
-              >
-                الخيارات:
-              </label>
-              {Object.entries(editForm.selectedOptions).map(
-                ([optionName, value]) => (
-                  <div key={optionName} style={{ marginBottom: 8 }}>
-                    <span style={{ marginRight: 8 }}>{optionName}:</span>
+          {editingProduct &&
+            getProductOptions(editingProduct.product_id || editingProduct.id)
+              .length > 0 && (
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 8, display: "block" }}>
+                  الخيارات:
+                </label>
+                {getProductOptions(editingProduct.product_id || editingProduct.id).map((opt) => (
+                  <div key={opt.name} style={{ marginBottom: 8 }}>
+                    <span style={{ marginRight: 8 }}>{opt.name}:</span>
                     <Select
                       style={{ minWidth: 120 }}
-                      value={value}
+                      value={editForm.selectedOptions?.[opt.name]}
                       onChange={(value) =>
                         setEditForm((prev) => ({
                           ...prev,
                           selectedOptions: {
                             ...prev.selectedOptions,
-                            [optionName]: value,
+                            [opt.name]: value,
                           },
                         }))
                       }
+                      placeholder={`اختر ${opt.name}`}
                     >
-                      {getProductOptions(editingProduct.product_id)
-                        .find((opt) => opt.name === optionName)
-                        ?.values.map((val) => (
-                          <Option key={val} value={val}>
-                            {val}
-                          </Option>
-                        ))}
+                      {opt.values.map((val) => (
+                        <Option key={val} value={val}>
+                          {val}
+                        </Option>
+                      ))}
                     </Select>
                   </div>
-                )
-              )}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          
           <div>
             <label
               style={{

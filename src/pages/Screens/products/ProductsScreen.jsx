@@ -174,23 +174,26 @@ const ProductsScreen = () => {
       sorter: (a, b) => a.stock - b.stock,
     },
     {
-      title: "التوفر",
-      dataIndex: "available",
-      key: "available",
-      width: 100,
-      render: (available, record) => (
+  title: "التوفر",
+  dataIndex: "available",
+  key: "available",
+  width: 100,
+  render: (available, record) => {
+    if (record.stock === 0) {
+      return (
         <div>
-          <Tag color={available ? "green" : "red"}>
-            {available ? "متوفر" : "غير متوفر"}
-          </Tag>
-          {record.stock === 0 && (
-            <div style={{ fontSize: "10px", color: "#999", marginTop: "2px" }}>
-              نفد المخزون
-            </div>
-          )}
+          <Tag color="red">غير متوفر</Tag>
+          <div style={{ fontSize: "10px", color: "#ff4d4f", marginTop: "2px" }}>
+            نفد المخزون
+          </div>
         </div>
-      ),
-    },
+      );
+    }
+    return (
+      <Tag color="green">متوفر</Tag>
+    );
+  },
+},
     {
       title: "نشط",
       dataIndex: "active",
