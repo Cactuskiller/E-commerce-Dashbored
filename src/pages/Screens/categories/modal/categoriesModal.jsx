@@ -158,7 +158,7 @@ export const CategoriesModal = ({
 
   const props = {
     name: "image",
-    action: "http://localhost:3000/admin/upload",
+    action: "http://192.168.8.1:3000/admin/upload",
     onChange(info) {
       if (info.file.status !== "uploading") {
         setImageLoading(true);

@@ -98,7 +98,7 @@ export const BannerContentModal = ({
 
   const slideUploadProps = {
     name: "image",
-    action: "http://localhost:3000/admin/upload",
+    action: "http://192.168.8.1:3000/admin/upload",
     showUploadList: false,
     onChange(info) {
       setImageLoading(true);
@@ -197,7 +197,7 @@ export const BannerContentModal = ({
 
   const props = {
     name: "image",
-    action: "http://localhost:3000/admin/upload",
+    action: "http://192.168.8.1:3000/admin/upload",
     onChange(info) {
       if (info.file.status !== "uploading") {
         setImageLoading(true);

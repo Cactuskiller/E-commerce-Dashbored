@@ -37,7 +37,7 @@ export const ImageModal = ({ visible, onClose, onSuccess, productId }) => {
   // Upload props
   const props = {
     name: "image",
-    action: "http://localhost:3000/admin/upload/save-product-image",
+    action: "http://192.168.8.1:3000/admin/upload/save-product-image",
     showUploadList: false,
     data: {
       product_id: productId,
