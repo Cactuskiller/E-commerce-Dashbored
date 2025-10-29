@@ -21,14 +21,19 @@ const ProductsScreen = () => {
   const [modalMode, setModalMode] = useState("edit");
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+  });
+  const [total, setTotal] = useState(0);
 
-  const getProducts = async () => {
+  const getProducts = async (page = pagination.current, limit = pagination.pageSize) => {
     if (loading) return;
     setLoading(true);
 
     try {
       const data = await apiCall({
-        pathname: "/admin/products",
+        pathname: `/admin/products?page=${page}&limit=${limit}`,
         method: "GET",
         auth: true,
       });
@@ -39,28 +44,26 @@ const ProductsScreen = () => {
         return;
       }
 
-      if (data && !data.error) {
-        let productsArray = [];
-        if (Array.isArray(data)) productsArray = data;
-        else if (Array.isArray(data.data)) productsArray = data.data;
-        else if (Array.isArray(data.products)) productsArray = data.products;
+      let productsArray = [];
+      if (Array.isArray(data)) productsArray = data;
+      else if (Array.isArray(data.data)) productsArray = data.data;
+      else if (Array.isArray(data.products)) productsArray = data.products;
 
-        setProductsData(productsArray);
-      } else {
-        message.error("فشل في تحميل المنتجات");
-        setProductsData([]);
-      }
+      setProductsData(productsArray);
+      setTotal(data?.total || productsArray.length); // Adjust if your API returns total
     } catch (error) {
       message.error("حدث خطأ في تحميل المنتجات");
       setProductsData([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    getProducts();
-  }, []);
+    getProducts(pagination.current, pagination.pageSize);
+    // eslint-disable-next-line
+  }, [pagination.current, pagination.pageSize]);
 
   const handleDeleteClick = async (id) => {
     const response = await apiCall({
@@ -278,11 +281,16 @@ const ProductsScreen = () => {
         rowKey="id"
         scroll={{ x: 1200 }}
         pagination={{
-          pageSize: 10,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: total,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} من ${total} منتج`,
+          onChange: (page, pageSize) => {
+            setPagination({ current: page, pageSize });
+          },
         }}
         locale={{
           emptyText: loading ? "جاري التحميل..." : "لا توجد منتجات",

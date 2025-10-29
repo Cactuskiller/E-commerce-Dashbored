@@ -598,7 +598,12 @@ export const BannerContentModal = ({
       auth: true,
     }).then((res) => {
       if (res && !res.error) {
-        setProducts(Array.isArray(res.data) ? res.data : res);
+        // Always set products as an array
+        let productsArray = [];
+        if (Array.isArray(res)) productsArray = res;
+        else if (Array.isArray(res.data)) productsArray = res.data;
+        else if (Array.isArray(res.products)) productsArray = res.products;
+        setProducts(productsArray);
         // For Timer, if products are objects, extract their IDs
         if (
           record?.type === "Timer" &&
@@ -613,7 +618,7 @@ export const BannerContentModal = ({
           setRecord({ ...record, map: updatedMap });
         }
       } else {
-        setProducts([]);
+        setProducts([]); // fallback to empty array
       }
     });
   }

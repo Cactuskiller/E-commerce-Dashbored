@@ -207,12 +207,11 @@ export const OrderDetailsDrawer = ({
         method: "GET",
         auth: true,
       });
-      const productsListRaw = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-        ? res.data
-        : [];
-      setAvailableProducts(productsListRaw);
+      let productsArray = [];
+      if (Array.isArray(res)) productsArray = res;
+      else if (Array.isArray(res.data)) productsArray = res.data;
+      else if (Array.isArray(res.products)) productsArray = res.products;
+      setAvailableProducts(productsArray);
     } catch {
       message.error("فشل في تحميل المنتجات المتاحة");
       setAvailableProducts([]);

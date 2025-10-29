@@ -13,13 +13,19 @@ const OrdersScreen = () => {
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [pagination, setPagination] = useState({
+  current: 1,
+  pageSize: 10,
+});
+const [total, setTotal] = useState(0);
 
-  const getOrders = async () => {
+
+  const getOrders = async (page = pagination.current, limit = pagination.pageSize) => {
     if (loading) return;
     setLoading(true);
     try {
       const data = await apiCall({
-        pathname: "/admin/orders",
+        pathname: `/admin/orders?page=${page}&limit=${limit}`,
         method: "GET",
         auth: true,
       });
@@ -30,20 +36,26 @@ const OrdersScreen = () => {
         return;
       }
 
-      console.log("Fetched orders:", data); // Debug log
+      let ordersArray = [];
+      if (Array.isArray(data)) ordersArray = data;
+      else if (Array.isArray(data.data)) ordersArray = data.data;
+      else if (Array.isArray(data.orders)) ordersArray = data.orders;
 
-      setOrdersData(Array.isArray(data) ? data : []);
+      setOrdersData(ordersArray);
+      setTotal(data?.total || ordersArray.length); // Adjust if your API returns total
     } catch {
       message.error("فشل في تحميل الطلبات");
       setOrdersData([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    getOrders();
-  }, []);
+    getOrders(pagination.current, pagination.pageSize);
+    // eslint-disable-next-line
+  }, [pagination.current, pagination.pageSize]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     try {
@@ -183,7 +195,18 @@ const OrdersScreen = () => {
         columns={columns}
         dataSource={ordersData}
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) =>
+            `${range[0]}-${range[1]} من ${total} طلب`,
+          onChange: (page, pageSize) => {
+            setPagination({ current: page, pageSize });
+          },
+        }}
       />
 
       <OrderDetailsDrawer
