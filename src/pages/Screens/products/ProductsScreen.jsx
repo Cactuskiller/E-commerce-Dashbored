@@ -26,6 +26,8 @@ const ProductsScreen = () => {
     pageSize: 10,
   });
   const [total, setTotal] = useState(0);
+  const [searchText, setSearchText] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   const getProducts = async (page = pagination.current, limit = pagination.pageSize) => {
     if (loading) return;
@@ -64,6 +66,21 @@ const ProductsScreen = () => {
     getProducts(pagination.current, pagination.pageSize);
     // eslint-disable-next-line
   }, [pagination.current, pagination.pageSize]);
+
+  useEffect(() => {
+    if (searchText.trim() === "") {
+      setFilteredProducts(productsData);
+    } else {
+      const lower = searchText.toLowerCase();
+      setFilteredProducts(
+        productsData.filter(
+          (p) =>
+            p.name?.toLowerCase().includes(lower) ||
+            p.description?.toLowerCase().includes(lower)
+        )
+      );
+    }
+  }, [searchText, productsData]);
 
   const handleDeleteClick = async (id) => {
     const response = await apiCall({
@@ -260,7 +277,20 @@ const ProductsScreen = () => {
             {loading ? "جاري التحميل..." : `العدد: ${productsData.length} منتج`}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <input
+            type="text"
+            placeholder="بحث عن منتج..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #ddd",
+              minWidth: 180,
+              fontSize: "14px",
+            }}
+          />
           <Button onClick={getProducts} loading={loading}>
             تحديث
           </Button>
@@ -276,7 +306,7 @@ const ProductsScreen = () => {
 
       <Table
         columns={columns}
-        dataSource={productsData}
+        dataSource={filteredProducts}
         loading={loading}
         rowKey="id"
         scroll={{ x: 1200 }}
