@@ -52,6 +52,7 @@ const ProductsScreen = () => {
       else if (Array.isArray(data.products)) productsArray = data.products;
 
       setProductsData(productsArray);
+      setFilteredProducts(productsArray); // <-- Add this line
       setTotal(data?.total || productsArray.length); // Adjust if your API returns total
     } catch (error) {
       message.error("حدث خطأ في تحميل المنتجات");

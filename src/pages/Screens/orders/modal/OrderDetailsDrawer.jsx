@@ -51,7 +51,7 @@ export const OrderDetailsDrawer = ({
     quantity: 1,
     notes: "",
   });
-
+  const [allProducts, setAllProducts] = useState([]);
   const [saveOrderError, setSaveOrderError] = useState("");
 
   // Add these states at the top with your other useState hooks:
@@ -220,8 +220,28 @@ export const OrderDetailsDrawer = ({
     }
   };
 
+  const fetchAllProducts = async () => {
+    try {
+      const response = await apiCall({
+        pathname: "/admin/products/all",
+        method: "GET",
+        auth: true,
+      });
+
+      let productsArray = [];
+      if (Array.isArray(response)) productsArray = response;
+      else if (Array.isArray(response.data)) productsArray = response.data;
+      else if (Array.isArray(response.products)) productsArray = response.products;
+
+      setAllProducts(productsArray);
+    } catch (error) {
+      console.error("Error fetching all products:", error);
+      setAllProducts([]);
+    }
+  };
+
   const handleAddProductClick = () => {
-    fetchAvailableProducts();
+    fetchAllProducts();
     setAddProductModalVisible(true);
   };
 
@@ -841,7 +861,7 @@ export const OrderDetailsDrawer = ({
                 option?.children?.toLowerCase()?.includes(input.toLowerCase())
               }
             >
-              {availableProducts.map((product) => (
+              {allProducts.map((product) => (
                 <Option key={product.id} value={product.id}>
                   <div
                     style={{
