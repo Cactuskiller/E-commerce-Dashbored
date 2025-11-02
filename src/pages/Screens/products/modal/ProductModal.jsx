@@ -155,29 +155,35 @@ export const ProductModal = ({
   };
 
   // Fetch all products for the related dropdown
-  const fetchAllProducts = async () => {
-    try {
-      const response = await apiCall({
-        pathname: "/admin/products",
-        method: "GET",
-        auth: true,
-      });
-      let productsArray = [];
-      if (Array.isArray(response)) productsArray = response;
-      else if (Array.isArray(response.data)) productsArray = response.data;
-      else if (Array.isArray(response.products)) productsArray = response.products;
-      setAllProducts(productsArray);
-    } catch {
-      setAllProducts([]);
-    }
-  };
+// ✅ Fetch all products only for related dropdown
+const fetchAllProducts = async () => {
+  try {
+    const response = await apiCall({
+      pathname: "/admin/products/all",
+      method: "GET",
+      auth: true,
+    });
 
-  useEffect(() => {
-    if (isOpen && mode !== "delete") {
-      fetchCategories();
-      fetchAllProducts();
-    }
-  }, [isOpen, mode]);
+    let productsArray = [];
+    if (Array.isArray(response)) productsArray = response;
+    else if (Array.isArray(response.data)) productsArray = response.data;
+    else if (Array.isArray(response.products)) productsArray = response.products;
+
+    setAllProducts(productsArray);
+  } catch (error) {
+    console.error("Error fetching all products:", error);
+    setAllProducts([]);
+  }
+};
+
+
+ useEffect(() => {
+  if (isOpen && mode !== "delete") {
+    fetchCategories();
+    fetchAllProducts(); 
+  }
+}, [isOpen, mode]);
+
 
   useEffect(() => {
     if (isOpen && mode !== "delete") {

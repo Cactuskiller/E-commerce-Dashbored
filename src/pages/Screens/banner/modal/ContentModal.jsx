@@ -575,9 +575,7 @@ export const BannerContentModal = ({
       }).then((res) => {
         if (res && !res.error) {
           setCategories(Array.isArray(res.data) ? res.data : res);
-          // If record.map contains category objects, extract their IDs for selection
           if (Array.isArray(record?.map) && record.map.length > 0 && !record.map[0].categoryIds) {
-            // If map contains objects, extract IDs
             const selectedIds = Array.isArray(record.map)
               ? record.map.map(cat => cat.id).filter(Boolean)
               : [];
@@ -589,39 +587,37 @@ export const BannerContentModal = ({
         }
       });
     }
-    // Fetch products when modal opens for List or Timer type
-    // Fetch products when modal opens for List or Timer type
-  if (isOpen && (record?.type === "List" || record?.type === "Timer")) {
-    apiCall({
-      pathname: "/admin/products",
-      method: "GET",
-      auth: true,
-    }).then((res) => {
-      if (res && !res.error) {
-        // Always set products as an array
-        let productsArray = [];
-        if (Array.isArray(res)) productsArray = res;
-        else if (Array.isArray(res.data)) productsArray = res.data;
-        else if (Array.isArray(res.products)) productsArray = res.products;
-        setProducts(productsArray);
-        // For Timer, if products are objects, extract their IDs
-        if (
-          record?.type === "Timer" &&
-          Array.isArray(getFirstMap(record)?.products) &&
-          (!getFirstMap(record)?.productIds || getFirstMap(record)?.productIds.length === 0)
-        ) {
-          const selectedIds = getFirstMap(record).products.map(p => p.id).filter(Boolean);
-          const updatedMap = [{
-            ...getFirstMap(record),
-            productIds: selectedIds,
-          }];
-          setRecord({ ...record, map: updatedMap });
+    // Fetch all products when modal opens for List or Timer type
+    if (isOpen && (record?.type === "List" || record?.type === "Timer")) {
+      // Use /admin/products/all to fetch all products
+      apiCall({
+        pathname: "/admin/products/all",
+        method: "GET",
+        auth: true,
+      }).then((res) => {
+        if (res && !res.error) {
+          let productsArray = [];
+          if (Array.isArray(res)) productsArray = res;
+          else if (Array.isArray(res.data)) productsArray = res.data;
+          else if (Array.isArray(res.products)) productsArray = res.products;
+          setProducts(productsArray);
+          if (
+            record?.type === "Timer" &&
+            Array.isArray(getFirstMap(record)?.products) &&
+            (!getFirstMap(record)?.productIds || getFirstMap(record)?.productIds.length === 0)
+          ) {
+            const selectedIds = getFirstMap(record).products.map(p => p.id).filter(Boolean);
+            const updatedMap = [{
+              ...getFirstMap(record),
+              productIds: selectedIds,
+            }];
+            setRecord({ ...record, map: updatedMap });
+          }
+        } else {
+          setProducts([]);
         }
-      } else {
-        setProducts([]); // fallback to empty array
-      }
-    });
-  }
+      });
+    }
   }, [isOpen]);
 
   if (!isOpen || !record) return null;

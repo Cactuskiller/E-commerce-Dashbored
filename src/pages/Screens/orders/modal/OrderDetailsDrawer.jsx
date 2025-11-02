@@ -388,7 +388,6 @@ export const OrderDetailsDrawer = ({
     setUpdatingOrder(true);
 
     try {
-      // ✅ Prepare data to send
       const payload = {
         user_id: order.user_id,
         items: JSON.stringify(localItems),
@@ -399,10 +398,9 @@ export const OrderDetailsDrawer = ({
         voucher_info: order.voucher_info,
         delivery_cost: order.delivery_cost,
         voucher_id: order.voucher_id,
-        different_stock: differentValueStock, // ✅ NEW FIELD
+        different_stock: differentValueStock, 
       };
 
-      // ✅ Send the updated order to the backend
       const res = await apiCall({
         pathname: `/admin/orders/${order.id}`,
         method: "PUT",
@@ -417,7 +415,6 @@ export const OrderDetailsDrawer = ({
       message.success("✅ تم حفظ التغييرات بنجاح");
       refreshOrders?.();
 
-      // ✅ Optionally update local state to reflect saved data
       order.items = JSON.stringify(localItems);
     } catch (error) {
       console.error("❌ Save Order Error:", error);
@@ -490,7 +487,7 @@ export const OrderDetailsDrawer = ({
             {localItems
               .reduce((t, i) => {
                 const price = parseFloat(i.price) || 0;
-                const quantity = i?.qty || 0;
+                const quantity = i?.qty ?? i?.quantity ?? 0;
                 return t + price * quantity;
               }, 0)
               .toFixed(2)}
@@ -648,6 +645,10 @@ export const OrderDetailsDrawer = ({
                     shape="square"
                     src={
                       item.image ||
+                      // Try to get image from liveItems if not present
+                      (
+                        liveItems.find(p => p.id === item.product_id || p.id === item.id)?.image
+                      ) ||
                       (Array.isArray(item.images) && item.images.length > 0
                         ? item.images[0].link
                         : fallbackImage)
@@ -699,10 +700,10 @@ export const OrderDetailsDrawer = ({
                               : 0;
                             // ✅ allow up to live + old
                             return (
-                              liveStock + (item?.initialQty || item?.qty || 0)
+                              liveStock + (item?.initialQty ?? item?.qty ?? item?.quantity ?? 0)
                             );
                           })()}
-                          value={item?.qty || 0}
+                          value={item?.qty ?? item?.quantity ?? 0}
                           onChange={(value) =>
                             handleQuantityChange(index, item, null, value)
                           }
@@ -739,7 +740,7 @@ export const OrderDetailsDrawer = ({
                     }}
                   >
                     <div>
-                      ${((parseFloat(item.price) || 0) * item?.qty).toFixed(2)}
+                      ${((parseFloat(item.price) || 0) * (item?.qty ?? item?.quantity ?? 0)).toFixed(2)}
                     </div>
                   </div>
                 </div>
