@@ -98,7 +98,7 @@ export const BannerContentModal = ({
 
   const slideUploadProps = {
     name: "image",
-    action: "http://192.168.8.1:3000/admin/upload",
+    action: "https://danya.puretik.info/api/admin/upload",
     showUploadList: false,
     onChange(info) {
       setImageLoading(true);
