@@ -197,7 +197,7 @@ export const BannerContentModal = ({
 
   const props = {
     name: "image",
-    action: "http://192.168.8.1:3000/admin/upload",
+    action: "https://danya.puretik.info/api/admin/upload",
     onChange(info) {
       if (info.file.status !== "uploading") {
         setImageLoading(true);
